@@ -255,7 +255,6 @@ class PersonUpdateMixin(PopItApiMixin):
             membership['person_id'] = person_id
             membership['organization_id'] = party['id']
             self.create_membership(**membership)
-        invalidate_person(person_id)
 
     def create_candidate_list_memberships(self, person_id, data):
         for election_year, constituency in data.get('standing_in', {}).items():
@@ -268,8 +267,6 @@ class PersonUpdateMixin(PopItApiMixin):
                 membership['post_id'] = constituency['post_id']
                 membership['role'] = "Candidate"
                 self.create_membership(**membership)
-        invalidate_person(person_id)
-
 
     def create_person(self, data, change_metadata):
         fix_dates(data)
@@ -288,8 +285,8 @@ class PersonUpdateMixin(PopItApiMixin):
         self.create_party_memberships(person_id, data)
         self.create_candidate_list_memberships(person_id, data)
         person_added.send(sender=PopItPerson, data=data)
-        return person_id
         invalidate_person(person_id)
+        return person_id
 
     def update_person(self, data, change_metadata, previous_versions):
         fix_dates(data)
