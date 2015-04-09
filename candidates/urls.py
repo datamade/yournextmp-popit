@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, include, url
+from django.views.decorators.cache import cache_page
 
 from django.contrib import admin
 from django.views.generic import TemplateView
@@ -8,7 +9,7 @@ import candidates.views as views
 from .feeds import RecentChangesFeed
 
 urlpatterns = patterns('',
-    url(r'^$', views.ConstituencyPostcodeFinderView.as_view(), name='finder'),
+    url(r'^$', cache_page(60 * 15)(views.ConstituencyPostcodeFinderView.as_view()), name='finder'),
     url(r'^lookup/name$', views.ConstituencyNameFinderView.as_view(), name='lookup-name'),
     url(r'^lookup/postcode$', views.ConstituencyPostcodeFinderView.as_view(), name='lookup-postcode'),
     url(r'^constituencies$', views.ConstituencyListView.as_view(), name='constituencies'),
@@ -16,7 +17,7 @@ urlpatterns = patterns('',
         views.ConstituencyDetailCSVView.as_view(),
         name='constituency_csv'),
     url(r'^constituency/(?P<mapit_area_id>\d+)/(?P<ignored_slug>.*)$',
-        views.ConstituencyDetailView.as_view(),
+        cache_page(60 * 15)(views.ConstituencyDetailView.as_view()),
         name='constituency'),
     url(r'^candidacy$',
         views.CandidacyView.as_view(),
@@ -36,8 +37,8 @@ urlpatterns = patterns('',
     url(r'^person/(?P<person_id>\d+)/merge$',
         views.MergePeopleView.as_view(),
         name='person-merge'),
-    url(r'^person/(?P<person_id>\d+)(?:/(?P<ignored_slug>.*))?$',
-        views.PersonView.as_view(),
+    url(r'^person/(?P<person_id>\d+)/foo/(?:/(?P<ignored_slug>.*))?$',
+        cache_page(60 * 15)(views.PersonView.as_view()),
         name='person-view'),
     url(r'^party/(?P<organization_id>[a-z-]+:\d+)/(?P<ignored_slug>.*)$',
         views.PartyDetailView.as_view(),

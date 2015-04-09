@@ -23,7 +23,7 @@ configuration_file = os.path.join(
 with open(configuration_file) as f:
     conf = yaml.load(f)
 
-ALLOWED_HOSTS = conf.get('ALLOWED_HOSTS')
+ALLOWED_HOSTS = ['*',]
 
 # Load the credentials for the PopIt instance
 
@@ -56,7 +56,8 @@ SERVER_EMAIL = conf['SERVER_EMAIL']
 SECRET_KEY = conf['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(int(conf.get('STAGING')))
+# DEBUG = bool(int(conf.get('STAGING')))
+DEBUG = True
 
 TEMPLATE_DEBUG = True
 
@@ -102,6 +103,7 @@ INSTALLED_APPS = (
     'moderation_queue',
     'auth_helpers',
     'debug_toolbar',
+    'official_documents',
 )
 
 SITE_ID = 1
@@ -111,7 +113,7 @@ MIDDLEWARE_CLASSES = (
     'candidates.middleware.PopItDownMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'candidates.middleware.CopyrightAssignmentMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -213,6 +215,12 @@ PIPELINE_CSS = {
         ),
         'output_filename': 'css/image-review.css',
     },
+    'official_documents': {
+        'source_filenames': (
+            'official_documents/css/official_documents.scss',
+        ),
+        'output_filename': 'css/official_documents.css',
+    },
     'all': {
         'source_filenames': (
             'candidates/style.scss',
@@ -300,6 +308,7 @@ FORCE_HTTPS_IMAGES = conf.get('FORCE_HTTPS_IMAGES')
 if conf.get('NGINX_SSL'):
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+
 
 if DEBUG:
     cache = {'BACKEND': 'django.core.cache.backends.dummy.DummyCache'}
