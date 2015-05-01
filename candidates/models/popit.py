@@ -112,9 +112,19 @@ form_complex_fields_locations = {
     }
 }
 
+# FIXME: https://github.com/mysociety/yournextmp-popit/issues/354
+
 election_date_2005 = date(2005, 5, 5)
 election_date_2010 = date(2010, 5, 6)
 election_date_2015 = date(2015, 5, 7)
+
+election_to_election_date = {
+    '2005': election_date_2005,
+    '2010': election_date_2010,
+    '2015': election_date_2015,
+}
+
+# end of FIXME
 
 all_form_fields = form_simple_fields.keys() + \
     form_complex_fields_locations.keys()
@@ -554,11 +564,12 @@ class PopItPerson(object):
 
     @standing_in.setter
     def standing_in(self, v):
-        # Find all the memberships that aren't candidate memberships:
+        # Preserve all the memberships that aren't candidate
+        # memberships or actual members of the post.
         memberships = [
             m for m in
             self.popit_data.get('memberships', [])
-            if m.get('role', '').lower() != 'candidate'
+            if m.get('role', '').lower() not in ('', 'member', 'candidate')
         ]
         # And now add the new memberships from the value that's being
         # set:
@@ -572,6 +583,16 @@ class PopItPerson(object):
                 membership['post_id'] = constituency['post_id']
                 membership['role'] = "Candidate"
                 memberships.append(membership)
+                if constituency.get('elected'):
+                    memberships.append({
+                        'start_date': election_to_election_date[election_year],
+                        'end_date': '9999-12-31',
+                        'person_id': self.id,
+                        'post_id': constituency['post_id'],
+                        # FIXME: https://github.com/mysociety/yournextmp-popit/issues/354
+                        'organization_id': 'commons',
+                    })
+
         self.popit_data['memberships'] = memberships
         self.popit_data['standing_in'] = v
 
@@ -1083,6 +1104,16 @@ class PopItPerson(object):
             form_complex_fields_locations.keys()
         for field in settable_fields:
             setattr(self, field, form_data[field])
+
+    def set_elected(self, was_elected, year="2015"):
+        standing_in = self.standing_in
+        if not standing_in:
+            message = "Can't set_elected of a candidate with no standing_in"
+            raise Exception, message
+        if not standing_in.get(year):
+            message = "No standing_in information for {0}".format(year)
+        standing_in[year]['elected'] = was_elected
+        self.standing_in = standing_in
 
 
 def update_values_in_sub_array(data, location, new_value):
