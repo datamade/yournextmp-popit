@@ -52,13 +52,15 @@ class FakeCollection(object):
     # collection)
     def _instance_get(self, **kwargs):
         try:
-            return get_example_popit_json(
-                '{0}_{1}_embed={2}.json'.format(
-                    self.collection,
-                    self.object_id,
-                    kwargs.get('embed', 'membership')))
+            basename = '{0}_{1}_embed={2}.json'.format(
+                self.collection,
+                self.object_id,
+                kwargs.get('embed', 'membership')
+            )
+            return get_example_popit_json(basename)
         except IOError as e:
             if e.errno == errno.ENOENT:
+                print >> sys.stderr, "Failed to find example data:", basename
                 raise HttpClientError('Client Error 404')
             else:
                 raise
