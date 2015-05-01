@@ -38,3 +38,19 @@ def constituency_in_year(person, year):
             person.party_memberships[year]['name']
         )
     return mark_safe(result)
+
+@register.filter
+def election_decision_known(person, year):
+    standing_in = person.popit_data.get('standing_in') or {}
+    if year not in standing_in:
+        return False
+    year_data = standing_in.get(year, {})
+    return year_data.get('elected') is not None
+
+@register.filter
+def was_elected(person, year):
+    standing_in = person.popit_data.get('standing_in') or {}
+    if year not in standing_in:
+        return False
+    year_data = standing_in.get(year, {})
+    return bool(year_data.get('elected'))
