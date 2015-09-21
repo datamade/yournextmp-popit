@@ -111,6 +111,7 @@ class Command(BaseCommand):
             else:
                 party_id = 'party:401'
 
+
             party_name = PARTY_DATA.party_id_to_name[party_id]
 
             person.party_memberships = {
