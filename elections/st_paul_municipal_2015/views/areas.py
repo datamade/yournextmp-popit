@@ -16,7 +16,7 @@ from candidates.models.auth import get_edits_allowed
 from candidates.popit import PopItApiMixin
 from candidates.forms import NewPersonForm
 from candidates.views import ConstituencyDetailView
-from candidates.views.helpers import get_people_from_memberships
+from candidates.views.helpers import get_people_from_memberships, group_people_by_party
 
 from elections.mixins import ElectionMixin
 
@@ -47,7 +47,7 @@ class StPaulAreasView(PopItApiMixin, TemplateView):
             ocd_division = area_id.replace(',', '/')
             # Show candidates from the current elections:
             for election, election_data in settings.ELECTIONS_CURRENT:
-
+                
                 if election_data['ocd_division'] in ocd_division:
 
                     post_data = get_post_cached(self.api, area_id)['result']
@@ -59,7 +59,13 @@ class StPaulAreasView(PopItApiMixin, TemplateView):
 
                     current_candidates, _ = get_people_from_memberships(
                         election_data,
-                        post_data['memberships'],
+                        post_data['memberships']
+                    )
+                    
+                    current_candidates = group_people_by_party(
+                        election,
+                        current_candidates,
+                        party_list=election_data.get('party_lists_in_use')
                     )
 
                     if not area_dict.get(ocd_division):
