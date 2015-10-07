@@ -11,7 +11,7 @@ from cached_counts.models import CachedCount
 from pygeocoder import Geocoder, GeocoderError
 import requests
 
-from elections.st_paul_municipal_2015.settings import OCD_BOUNDARIES_URL
+from ..utils import CandidateListMixin, get_cached_boundary
 
 class StPaulAddressForm(AddressForm):
 
@@ -20,7 +20,7 @@ class StPaulAddressForm(AddressForm):
         check_address(address)
         return address
 
-class StPaulAddressFinder(AddressFinderView):
+class StPaulAddressFinder(CandidateListMixin, AddressFinderView):
 
     form_class = StPaulAddressForm
     country = 'United States'
@@ -39,19 +39,15 @@ class StPaulAddressFinder(AddressFinderView):
         context = super(StPaulAddressFinder, self).get_context_data(**kwargs)
         context['needing_attention'] = \
             CachedCount.get_attention_needed_queryset()[:5]
+        
+        context['posts'] = self.get_all_candidates()
+        
         return context
 
-def get_cached_boundary(division_id):
-    if cache.get(division_id):
-        return cache.get(division_id)
-
-    boundary = requests.get('{0}/boundaries/'.format(OCD_BOUNDARIES_URL),
-                            params={'external_id': division_id})
-    cache.set(division_id, boundary.json(), None)
-
-    return boundary.json()
-
 def check_address(address_string, country=None):
+    
+    from ..settings import OCD_BOUNDARIES_URL
+    
     tidied_address = address_string.strip()
 
     if country is not None:

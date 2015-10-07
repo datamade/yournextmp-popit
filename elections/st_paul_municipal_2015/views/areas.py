@@ -12,19 +12,18 @@ from django.utils.http import urlquote
 from django.utils.translation import ugettext as _
 
 from candidates.cache import get_post_cached, UnknownPostException
-from candidates.models.auth import get_edits_allowed
 from candidates.popit import PopItApiMixin
-from candidates.forms import NewPersonForm
+from candidates.models.auth import get_edits_allowed
 from candidates.views import ConstituencyDetailView
-from candidates.views.helpers import get_people_from_memberships, group_people_by_party
 
 from elections.mixins import ElectionMixin
 
 from official_documents.models import OfficialDocument
 
 from .frontpage import get_cached_boundary
+from ..utils import CandidateListMixin
 
-class StPaulAreasView(PopItApiMixin, TemplateView):
+class StPaulAreasView(CandidateListMixin, TemplateView):
     template_name = 'candidates/areas.html'
 
     def get(self, request, *args, **kwargs):
@@ -49,45 +48,21 @@ class StPaulAreasView(PopItApiMixin, TemplateView):
             for election, election_data in settings.ELECTIONS_CURRENT:
                 
                 if election_data['ocd_division'] in ocd_division:
-
-                    post_data = get_post_cached(self.api, area_id)['result']
-                    boundary_data = get_cached_boundary(ocd_division)
-
-                    all_area_names.add(boundary_data['objects'][0]['name'])
-
-                    locked = post_data.get('candidates_locked', False)
-
-                    current_candidates, _ = get_people_from_memberships(
-                        election_data,
-                        post_data['memberships']
-                    )
                     
-                    current_candidates = group_people_by_party(
-                        election,
-                        current_candidates,
-                        party_list=election_data.get('party_lists_in_use')
-                    )
-
                     if not area_dict.get(ocd_division):
                         area_dict[ocd_division] = 'done'
-
-                        context['posts'].append({
-                            'election': election,
-                            'election_data': election_data,
-                            'post_data': post_data,
-                            'candidates_locked': locked,
-                            'candidate_list_edits_allowed':
-                            get_edits_allowed(self.request.user, locked),
-                            'candidates': current_candidates,
-                            'add_candidate_form': NewPersonForm(
-                                election=election,
-                                initial={
-                                    ('constituency_' + election): area_id,
-                                    ('standing_' + election): 'standing',
-                                },
-                                hidden_post_widget=True,
-                            ),
-                        })
+                        
+                        area_name, post_data = self.get_candidates_for_area(area_id,
+                                                                            election, 
+                                                                            election_data)
+                        
+                        locked = post_data.get('candidates_locked', False)
+                        
+                        post_data['candidate_list_edits_allowed'] = \
+                                get_edits_allowed(self.request.user, locked)
+                        
+                        all_area_names.add(area_name)
+                        context['posts'].append(post_data)
 
         context['all_area_names'] = u' — '.join(all_area_names)
         context['suppress_official_documents'] = True
