@@ -60,7 +60,7 @@ def check_address(address_string, country=None):
     except GeocoderError:
         message = _(u"Failed to find a location for '{0}'")
         raise ValidationError(message.format(tidied_address))
-
+    
     coords = ','.join([str(p) for p in location_results[0].coordinates])
 
     if cache.get(coords):
