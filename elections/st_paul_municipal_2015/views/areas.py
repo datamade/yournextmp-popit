@@ -90,7 +90,6 @@ class StPaulAreasView(TemplateView):
                         hidden_post_widget=True,
                     ),
                 })
-
         context['all_area_names'] = u' — '.join(all_area_names)
         context['suppress_official_documents'] = True
 
