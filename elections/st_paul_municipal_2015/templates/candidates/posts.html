@@ -15,8 +15,9 @@
 
   {% for election_data in all_posts %}
 
-    {% with election=election_data.election posts=election_data.posts %}
-        <h2>{{ election.name }}</h2>
+    {% with election_data=election_data_and_posts.election_data %}
+      {% with posts=election_data_and_posts.posts %}
+        <h3>{{ election_data.name }}</h3>
 
         <ul>
           {% for p in posts %}
