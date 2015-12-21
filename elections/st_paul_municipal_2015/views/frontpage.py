@@ -1,5 +1,6 @@
 from django.http import HttpResponseRedirect
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
@@ -7,8 +8,6 @@ from django.utils.translation import ugettext as _
 
 from candidates.views import AddressFinderView
 from candidates.forms import AddressForm
-
-from cached_counts.models import CachedCount
 
 from pygeocoder import Geocoder, GeocoderError
 import requests
@@ -37,11 +36,6 @@ class StPaulAddressFinder(AddressFinderView):
             reverse('st-paul-areas-view', kwargs=resolved_address)
         )
 
-    def get_context_data(self, **kwargs):
-        context = super(StPaulAddressFinder, self).get_context_data(**kwargs)
-        context['needing_attention'] = \
-            CachedCount.get_attention_needed_queryset()[:5]
-        return context
 
 def get_cached_boundary(division_id):
     if cache.get(division_id):
@@ -90,6 +84,6 @@ def check_address(address_string, country=None):
         return {
             'area_ids': ';'.join(areas),
         }
- 
+
     error = _(u"Unable to find constituency for '{0}'")
     raise ValidationError(error.format(tidied_address))

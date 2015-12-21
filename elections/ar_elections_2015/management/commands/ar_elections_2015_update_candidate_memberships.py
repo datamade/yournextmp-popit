@@ -1,16 +1,15 @@
 import json
 
-from slumber.exceptions import HttpServerError, HttpClientError
-
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from candidates.popit import PopItApiMixin, popit_unwrap_pagination
+from elections.models import Election
 
-class Command(PopItApiMixin, BaseCommand):
+class Command(BaseCommand):
     help = "Fix all memberships that represent candidacies"
 
     def handle(self, **options):
+        from slumber.exceptions import HttpServerError, HttpClientError
+        from candidates.popit import popit_unwrap_pagination
 
         for membership in popit_unwrap_pagination(
                 self.api.memberships, embed='', per_page=100
@@ -22,13 +21,13 @@ class Command(PopItApiMixin, BaseCommand):
             post_role = post['role']
             # Now find the election that matches this membership and role:
             election_found = False
-            for election, edata in settings.ELECTIONS.items():
-                if edata['for_post_role'] != post_role:
+            for edata in Election.objects.all():
+                if edata.for_post_role != post_role:
                     continue
                 election_found = True
-                membership['election'] = election
+                membership['election'] = edata.slug
                 # Now correct the membership role:
-                membership['role'] = edata['candidate_membership_role']
+                membership['role'] = edata.candidate_membership_role
                 # Some of these memberships have a spurious 'area'
                 # attribute, set to: {'area': {'name': ''}} which will
                 # cause the PUT to fail, so remove that.

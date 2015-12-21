@@ -3,13 +3,13 @@
 STAGING: '1'
 
 # This can be either 'postgresql' or 'sqlite':
-DATABASE_SYSTEM: 'sqlite'
+DATABASE_SYSTEM: 'postgresql'
 
 # These settings are for when you've set 'postgresql' as the
 # DATABASE_SYSTEM above, otherwise (if you're using 'sqlite')
 # they're ignored.
 YNMP_DB_USER: ''
-YNMP_DB_NAME: ''
+YNMP_DB_NAME: 'ynr-example'
 YNMP_DB_PASS: ''
 YNMP_DB_PORT: ''
 YNMP_DB_HOST: ''
@@ -17,7 +17,7 @@ YNMP_DB_HOST: ''
 # Which election is this installation for? (This must be the name of a
 # package in the 'elections' package, at the moment one of
 # uk_general_election_2015 or ar_elections_2015):
-ELECTION_APP: 'uk_general_election_2015'
+ELECTION_APP: 'example'
 
 # Default language/timezone of the installation
 LANGUAGE_CODE: 'en-gb'
@@ -25,20 +25,6 @@ TIME_ZONE: 'Europe/London'
 
 # The path to the gems directory:
 GEMS_DIRECTORY: ''
-
-# The PopIt instance login details
-POPIT_INSTANCE: yournextmp
-POPIT_HOSTNAME: popit.mysociety.org
-
-# If you're using the new-style PopIt login, where you generate an API
-# then set POPIT_API_KEY and leave POPIT_USER and POPIT_PASSWORD blank.
-POPIT_API_KEY: 'f093903b7a1aa9688b36241502beadc7'
-
-# Conversely, if you're using the old-style login, where you have a
-# single username and password for the instance, set POPIT_USER and
-# POPIT_PASSWORD but make POPIT_API_KEY blank.
-POPIT_USER: someone@example.org
-POPIT_PASSWORD: popitinstancepassword
 
 # SECRET_KEY should be a random string of characters
 SECRET_KEY: '098nadkafy123asidftqaer0aoejfoasdfa'
@@ -67,6 +53,12 @@ DEFAULT_FROM_EMAIL: webmaster@localhost
 # You can use Google analytics by changing this to your Google
 # analytics tracking ID:
 GOOGLE_ANALYTICS_ACCOUNT: ''
+
+# You should set this to the name of a Twitter account associated with
+# the site; this will be used in the Twitter metadata for various
+# pages. This should just be the name of that account (not a URL), and
+# shouldn't include the @.
+TWITTER_USERNAME: ''
 
 # If you set this to true then the protocol of image URLs will be set
 # rewritten from http to https.

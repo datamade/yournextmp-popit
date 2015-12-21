@@ -3,17 +3,11 @@ import csv
 
 from io import StringIO
 
-from slumber.exceptions import HttpServerError, HttpClientError
-
-from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.template.defaultfilters import slugify
 
-from candidates.models import PopItPerson
-from candidates.popit import create_popit_api_object, get_search_url
 from candidates.views.version_data import get_change_metadata
-from candidates.cache import get_post_cached, UnknownPostException
-from candidates.election_specific import MAPIT_DATA, PARTY_DATA, AREA_POST_DATA
+from elections.models import Election
 
 import memcache
 
@@ -21,6 +15,8 @@ UNKNOWN_PARTY_ID = 'unknown'
 GOOGLE_DOC_ID = '1yme9Y9Vt876-cVR9bose3QDqF7j8hqLnWYEjO3HUqXs'
 
 def get_existing_popit_person(person_id):
+    from candidates.models import PopItPerson
+    from candidates.popit import get_search_url
     # See if this person already exists by searching for the
     # ID they were imported with:
     query_format = \
@@ -47,6 +43,11 @@ class Command(BaseCommand):
     help = "Load or update St. Paul candidates from Google docs"
 
     def handle(self, **options):
+        from slumber.exceptions import HttpClientError
+        from candidates.cache import get_post_cached, UnknownPostException
+        from candidates.election_specific import PARTY_DATA, shorten_post_label
+        from candidates.models import PopItPerson
+        from candidates.popit import create_popit_api_object
 
         spreadsheet_url = 'https://docs.google.com/spreadsheets/d/{0}/pub?output=csv'\
                               .format(GOOGLE_DOC_ID)
@@ -61,14 +62,12 @@ class Command(BaseCommand):
         for row in reader:
 
             try:
-                election_data = settings.ELECTIONS['council-member-2015']
-                ocd_division = election_data['post_id_format'].format(area_id=row['Ward'])
+                election_data = Election.objects.get_by_slug('council-member-2015')
+                ocd_division = election_data.post_id_format.format(area_id=row['Ward'])
                 post_data = get_post_cached(api, ocd_division)['result']
-                election_data['id'] = 'council-member-2015'
             except (UnknownPostException, memcache.Client.MemcachedKeyCharacterError):
-                election_data = settings.ELECTIONS['school-board-2015']
-                post_data = get_post_cached(api, election_data['post_id_format'])['result']
-                election_data['id'] = 'school-board-2015'
+                election_data = Election.objects.get_by_slug('school-board-2015')
+                post_data = get_post_cached(api, election_data.post_id_format)['result']
 
             person_id = slugify(row['Name'])
 
@@ -105,15 +104,12 @@ class Command(BaseCommand):
 
             standing_in_election = {
                 'post_id': post_data['id'],
-                'name': AREA_POST_DATA.shorten_post_label(
-                    election_data['id'],
-                    post_data['label'],
-                ),
+                'name': shorten_post_label(post_data['label']),
             }
             if 'area' in post_data:
                 standing_in_election['mapit_url'] = post_data['area']['identifier']
             person.standing_in = {
-                election_data['id']: standing_in_election
+                election_data.slug: standing_in_election
             }
 
             if 'dfl' in row['Party'].lower():
@@ -129,7 +125,7 @@ class Command(BaseCommand):
             party_name = PARTY_DATA.party_id_to_name[party_id]
 
             person.party_memberships = {
-                election_data['id']: {
+                election_data.slug: {
                     'id': party_id,
                     'name': party_name,
                 }

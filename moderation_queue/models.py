@@ -1,28 +1,14 @@
-import datetime
-
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
+from popolo.models import Person
 
 PHOTO_REVIEWERS_GROUP_NAME = 'Photo Reviewers'
 
 
-class QueuedImage(models.Model):
-
-    APPROVED = 'approved'
-    REJECTED = 'rejected'
-    UNDECIDED = 'undecided'
-    IGNORE = 'ignore'
-
-    DECISION_CHOICES = (
-        (APPROVED, _('Approved')),
-        (REJECTED, _('Rejected')),
-        (UNDECIDED, _('Undecided')),
-        (IGNORE, _('Ignore')),
-    )
-
+class CopyrightOptions:
     PUBLIC_DOMAIN = 'public-domain'
     COPYRIGHT_ASSIGNED = 'copyright-assigned'
     PROFILE_PHOTO = 'profile-photo'
@@ -43,10 +29,25 @@ class QueuedImage(models.Model):
          _("Other")),
     )
 
+
+class QueuedImage(models.Model):
+
+    APPROVED = 'approved'
+    REJECTED = 'rejected'
+    UNDECIDED = 'undecided'
+    IGNORE = 'ignore'
+
+    DECISION_CHOICES = (
+        (APPROVED, _('Approved')),
+        (REJECTED, _('Rejected')),
+        (UNDECIDED, _('Undecided')),
+        (IGNORE, _('Ignore')),
+    )
+
     why_allowed = models.CharField(
         max_length=64,
-        choices=WHY_ALLOWED_CHOICES,
-        default=OTHER,
+        choices=CopyrightOptions.WHY_ALLOWED_CHOICES,
+        default=CopyrightOptions.OTHER,
     )
     justification_for_use = models.TextField(blank=True)
     decision = models.CharField(
@@ -58,7 +59,7 @@ class QueuedImage(models.Model):
         upload_to='queued-images/%Y/%m/%d',
         max_length=512,
     )
-    popit_person_id = models.CharField(max_length=256)
+    person = models.ForeignKey(Person, blank=True, null=True)
     user = models.ForeignKey(User, blank=True, null=True)
 
     crop_min_x = models.IntegerField(blank=True, null=True)
@@ -72,10 +73,10 @@ class QueuedImage(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
-        message = _(u'Image uploaded by {user} of candidate {popit_person_id}')
+        message = _(u'Image uploaded by {user} of candidate {person_id}')
         return message.format(
             user=self.user,
-            popit_person_id=self.popit_person_id
+            person_id=(self.person.id if self.person else None)
         )
 
     def get_absolute_url(self):

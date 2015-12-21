@@ -8,7 +8,7 @@ from .models import ResultEvent
 
 class BasicResultEventsFeed(Feed):
     feed_type = Atom1Feed
-    title = _("Election results from {{ site_name }}").format(
+    title = _("Election results from {site_name}").format(
         site_name=Site.objects.get_current().name
     )
     link = "/"
@@ -61,7 +61,7 @@ class ResultEventsAtomFeedGenerator(Atom1Feed):
             add_item_elements(handler, item)
         keys = [
             'post_id',
-            'winner_popit_person_id',
+            'winner_person_id',
             'winner_person_name',
             'winner_party_id',
             'winner_party_name',
@@ -89,8 +89,8 @@ class ResultEventsFeed(BasicResultEventsFeed):
     def item_extra_kwargs(self, o):
         return {
             'post_id': o.post_id,
-            'winner_popit_person_id': o.winner_popit_person_id,
-            'winner_person_name': o.winner_person_name,
+            'winner_person_id': o.winner.id,
+            'winner_person_name': o.winner.name,
             'winner_party_id': o.winner_party_id,
             'winner_party_name': o.winner_party_name,
             'user_id': o.user.id,

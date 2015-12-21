@@ -3,12 +3,27 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 from django.views.generic import TemplateView
 
+from rest_framework import routers
+
 import candidates.views as views
 
 from .feeds import RecentChangesFeed
 
+api_router = routers.DefaultRouter()
+api_router.register(r'persons', views.PersonViewSet)
+api_router.register(r'organizations', views.OrganizationViewSet)
+api_router.register(r'posts', views.PostViewSet)
+api_router.register(r'areas', views.AreaViewSet)
+api_router.register(r'area_types', views.AreaTypeViewSet)
+api_router.register(r'elections', views.ElectionViewSet)
+api_router.register(r'party_sets', views.PartySetViewSet)
+api_router.register(r'images', views.ImageViewSet)
+api_router.register(r'memberships', views.MembershipViewSet)
+
 urlpatterns = \
     patterns('',
+        (r'^api/(?P<version>v0.9)/', include(api_router.urls)),
+        (r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
         (r'^', include(settings.ELECTION_APP_FULLY_QUALIFIED + '.urls')),
     )
 
@@ -49,11 +64,6 @@ patterns_to_format = [
         'name': 'retract-winner'
     },
     {
-        'pattern': r'^election/{election}/post/invalidate$',
-        'view': views.InvalidatePostView.as_view(),
-        'name': 'post-cache-invalidate'
-    },
-    {
         'pattern': r'^election/{election}/post/{post}/(?P<ignored_slug>.*).csv$',
         'view': views.ConstituencyDetailCSVView.as_view(),
         'name': 'constituency_csv'
@@ -64,7 +74,7 @@ patterns_to_format = [
         'name': 'constituency'
     },
     {
-        'pattern': r'^election/{election}/party-list/{post}/(?P<organization_id>[a-z-]+(:[-\d]+)?)$',
+        'pattern': r'^election/{election}/party-list/{post}/(?P<organization_id>[^/]+)$',
         'view': views.OrderedPartyListView.as_view(),
         'name': 'party-for-post'
     },
@@ -124,12 +134,12 @@ patterns_to_format = [
         'name': 'areas-view',
     },
     {
-        'pattern': r'^areas-of-type/(?P<mapit_type>.*?)(?:/(?P<ignored_slug>.*))?$',
+        'pattern': r'^areas-of-type/(?P<area_type>.*?)(?:/(?P<ignored_slug>.*))?$',
         'view': views.AreasOfTypeView.as_view(),
         'name': 'areas-of-type-view',
     },
     {
-        'pattern': r'^election/{election}/party/(?P<organization_id>[a-z-]+(:[-\d]+)?)/(?P<ignored_slug>.*)$',
+        'pattern': r'^election/{election}/party/(?P<organization_id>[^/]+)/(?P<ignored_slug>.*)$',
         'view': views.PartyDetailView.as_view(),
         'name': 'party'
     },
@@ -149,46 +159,56 @@ patterns_to_format = [
         'name': 'leaderboard'
     },
     {
-        'pattern': r'^leaderboard/contributions.csv',
+        'pattern': r'^leaderboard/contributions.csv$',
         'view': views.UserContributions.as_view(),
         'name': 'user-contributions'
     },
     {
-        'pattern': r'^feeds/changes.xml',
+        'pattern': r'^feeds/changes.xml$',
         'view': RecentChangesFeed(),
         'name': 'changes_feed'
     },
     {
-        'pattern': r'^help/api',
+        'pattern': r'^help/api$',
         'view': views.HelpApiView.as_view(),
         'name': 'help-api'
     },
     {
-        'pattern': r'^help/about',
+        'pattern': r'^help/about$',
         'view': views.HelpAboutView.as_view(),
         'name': 'help-about'
     },
     {
-        'pattern': r'^help/privacy',
+        'pattern': r'^help/privacy$',
         'view': TemplateView.as_view(template_name="candidates/privacy.html"),
         'name': 'help-privacy'
     },
     {
-        'pattern': r'^copyright-question',
+        'pattern': r'^copyright-question$',
         'view': views.AskForCopyrightAssigment.as_view(),
         'name': 'ask-for-copyright-assignment'
     },
     {
-        'pattern': r'^person/invalidate$',
-        'view': views.InvalidatePersonView.as_view(),
-        'name': 'person-cache-invalidate'
+        'pattern': r'^post-id-to-party-set.json$',
+        'view': views.PostIDToPartySetView.as_view(),
+        'name': 'post-id-to-party-set'
     },
+    {
+        'pattern': r'^version.json',
+        'view': views.VersionView.as_view(),
+        'name': 'version'
+    },
+    {
+        'pattern': r'^upcoming-elections',
+        'view': views.UpcomingElectionsView.as_view(),
+        'name': 'upcoming-elections'
+    }
 ]
 
 urlpatterns += [
     url(
         p['pattern'].format(
-            election=settings.ELECTION_RE,
+            election=r'(?P<election>[^/]+)',
             post=r'(?P<post_id>[-\w]+)',
         ),
         p['view'],

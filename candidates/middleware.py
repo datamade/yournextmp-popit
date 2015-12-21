@@ -1,7 +1,6 @@
 import re
 
 from requests.adapters import ConnectionError
-from slumber.exceptions import HttpServerError, HttpClientError
 
 from django.conf import settings
 from django.contrib.sites.models import Site
@@ -19,33 +18,18 @@ from candidates.models.auth import (
 )
 
 
-class PopItDownMiddleware(object):
-
-    def process_exception(self, request, exc):
-        popit_down = False
-        if isinstance(exc, ConnectionError):
-            popit_down = True
-        elif isinstance(exc, HttpServerError) and '503' in unicode(exc):
-            popit_down = True
-        if popit_down:
-            return render(request, 'candidates/popit_down.html', status=503)
-        message_404 = 'Client Error 404' in unicode(exc)
-        if isinstance(exc, HttpClientError) and message_404:
-            raise Http404()
-        return None
-
-
 class DisallowedUpdateMiddleware(object):
 
     def process_exception(self, request, exc):
         if isinstance(exc, NameChangeDisallowedException):
+            intro = _(u'As a precaution, an update was blocked:')
+            outro = _(u'If this update is appropriate, someone should apply it manually.')
             # Then email the support address about the name change...
-            message = _(u'''As a precaution, an update was blocked:
-
-  {0}
-
-If this update is appropriate, someone should apply it manually.
-''').format(unicode(exc))
+            message = u'{intro}\n\n  {message}\n\n{outro}'.format(
+                intro=intro,
+                message=unicode(exc),
+                outro=outro,
+            )
             send_mail(
                 _('Disallowed {site_name} update for checking').format(
                     site_name=Site.objects.get_current().name

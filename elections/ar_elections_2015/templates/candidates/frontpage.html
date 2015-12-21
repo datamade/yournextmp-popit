@@ -1,29 +1,32 @@
 {% extends 'base.html' %}
 
+{% load absolute %}
 {% load i18n %}
 {% load metadescription %}
 
 {% block extra_head %}
+    <!-- Open Graph and Twitter card data -->
+    <meta property="og:url" name="twitter:url" content="{{ request.build_absolute_uri }}" />
+    <meta property="og:title" name="twitter:title" content="YoQuieroSaber Investigación" />
+
+    <meta property="og:description" name="twitter:description" content="YoQuieroSaber Investigación es una iniciativa colaborativa para saber más sobre los candidatos a las elecciones PASO del 9 de Agosto.">
+
     <!-- Open Graph data -->
-    <meta property="og:title" content="YoQuieroSaber Investigación" />
     <meta property="og:type" content="article" />
-    <meta property="og:url" content="{{ request.build_absolute_uri }}" />
     <meta property="og:image" content="{{ 'img/logo.png'|static_image_path:request }}" />
     <meta property="og:image:height" content="80" />
     <meta property="og:image:width" content="80" />
     <meta property="og:site_name" content="YoQuieroSaber Investigación" />
-    <meta property="og:description" content="YoQuieroSaber Investigación es una iniciativa colaborativa para saber más sobre los candidatos a las elecciones PASO del 9 de Agosto.">
     <meta property="og:locale" content="{{ LOCALE }}" />
 
     <!-- Twitter card data -->
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@YQS_Argentina" />
-    <meta name="twitter:title" content="YoQuieroSaber Investigación" />
+    {% if settings.TWITTER_USERNAME %}
+      <meta name="twitter:site" content="@{{ settings.TWITTER_USERNAME }}" />
+    {% endif %}
     <meta property="twitter:image" content="{{ 'img/logo.png'|static_image_path:request }}" />
     <meta property="twitter:image:height" content="120" />
     <meta property="twitter:image:width" content="120" />
-    <meta name="twitter:url" content="{{ request.build_absolute_uri }}" />
-    <meta name="twitter:description" content="YoQuieroSaber Investigación es una iniciativa colaborativa para saber más sobre los candidatos a las elecciones PASO del 9 de Agosto."  />
 {% endblock %}
 
 {% block body_class %}finder{% endblock %}
@@ -44,7 +47,7 @@
             {{ form.as_p }}
             <input type="submit" class="button" value="{% trans "Show candidates" %}">
         </form>
-        <p><a href="{% url 'areas-of-type-view' mapit_type='PRV' ignored_slug='provincia' %}">Ver todas las provincias</a></p>
+        <p><a href="{% url 'areas-of-type-view' area_type='PRV' ignored_slug='provincia' %}">Ver todas las provincias</a></p>
     </div>
 
 </div><!-- close .container -->
@@ -68,8 +71,8 @@
 
             <h2>¿Conocés los candidatos en estas elecciones?</h2>
             <ul class="finder__getting-started__priorities">
-              {% for cc in needing_attention %}
-                <li><a href="{% url 'constituency' election=cc.election post_id=cc.object_id ignored_slug=cc.name|slugify %}">{{ cc.name }}</a></li>
+              {% for row in needing_attention %}
+                <li><a href="{% url 'constituency' election=row.election_slug post_id=row.post_slug ignored_slug=row.post_short_label|slugify %}">{{ row.post_label }}</a></li>
               {% endfor %}
             </ul>
         </div>

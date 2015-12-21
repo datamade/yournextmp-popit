@@ -9,21 +9,11 @@ urlpatterns = [
     url(
         r'^$',
         views.ConstituencyPostcodeFinderView.as_view(),
-        name='lookup-name'
-    ),
-    url(
-        r'^lookup/name$',
-        views.ConstituencyNameFinderView.as_view(),
-        name='lookup-name'
-    ),
-    url(
-        r'^lookup/postcode$',
-        views.ConstituencyPostcodeFinderView.as_view(),
         name='lookup-postcode'
     ),
     url(
         r'^election/{election}/post/(?P<post_id>[-\w]+)/(?P<ignored_slug>{ignore_pattern})$'.format(
-            election=settings.ELECTION_RE,
+            election=r'(?P<election>[^/]+)',
             ignore_pattern=post_ignored_slug_re,
         ),
         views.UKConstituencyDetailView.as_view(),
@@ -31,7 +21,7 @@ urlpatterns = [
     ),
     url(
         r'^election/{election}/party/(?P<organization_id>[a-z-]+:[-\d]+)/(?P<ignored_slug>.*)$'.format(
-            election=settings.ELECTION_RE
+            election=r'(?P<election>[^/]+)'
         ),
         views.UKPartyDetailView.as_view(),
         name='party'

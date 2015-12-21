@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
 from django.db import models
 
-from candidates.election_specific import MAPIT_DATA, PARTY_DATA
+from popolo.models import Person
+from candidates.models import OrganizationExtra
 
 class ResultEvent(models.Model):
 
@@ -10,7 +11,7 @@ class ResultEvent(models.Model):
 
     created = models.DateTimeField(auto_now_add=True)
     election = models.CharField(blank=True, null=True, max_length=512)
-    winner_popit_person_id = models.CharField(blank=False, max_length=256)
+    winner = models.ForeignKey(Person)
     winner_person_name = models.CharField(blank=False, max_length=1024)
     post_id = models.CharField(blank=False, max_length=256)
     post_name = models.CharField(blank=True, null=True, max_length=1024)
@@ -23,24 +24,8 @@ class ResultEvent(models.Model):
 
     @property
     def winner_party_name(self):
-        return PARTY_DATA.party_id_to_name.get(self.winner_party_id)
-
-    @classmethod
-    def create_from_popit_person(cls, popit_person, election, source, user):
-        kwargs = {
-            'election': election,
-            'winner_popit_person_id': popit_person.id,
-            'winner_person_name': popit_person.name,
-            'post_id': popit_person.standing_in[election]['post_id'],
-            'post_name': popit_person.standing_in[election]['name'],
-            'winner_party_id': popit_person.party_memberships[election]['id'],
-            'source': source,
-            'user': user,
-            'parlparse_id': popit_person.get_identifier('uk.org.publicwhip')
-        }
-        if popit_person.proxy_image:
-            kwargs['proxy_image_url_template'] = \
-                '{base}/{{width}}/{{height}}.{{extension}}'.format(
-                    base=popit_person.proxy_image
-                )
-        return ResultEvent.objects.create(**kwargs)
+        return OrganizationExtra.objects \
+            .select_related('base') \
+            .get(
+                slug=self.winner_party_id
+            ).base.name

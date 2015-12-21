@@ -1,28 +1,20 @@
 # -*- coding: utf-8 -*-
 
-from datetime import date
 import dateutil.parser
 import csv
 from os.path import dirname, join
 import re
 import string
-import urllib
 import codecs
 
 import requests
-from slumber.exceptions import HttpClientError
 
-from django.conf import settings
-from django.contrib.auth.models import User
-from django.core.files.storage import FileSystemStorage
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 
-from candidates.cache import get_post_cached
-from candidates.election_specific import MAPIT_DATA, PARTY_DATA, AREA_POST_DATA
-from candidates.models import PopItPerson
-from candidates.popit import create_popit_api_object, get_search_url
 from candidates.utils import strip_accents
 from candidates.views.version_data import get_change_metadata
+
+from elections.models import Election
 
 UNKNOWN_PARTY_ID = 'unknown'
 USER_AGENT = (
@@ -33,22 +25,25 @@ USER_AGENT = (
 
 
 def get_post_data(api, election_id, province):
-    ynr_election_data = settings.ELECTIONS[election_id]
-    ynr_election_data['id'] = election_id
-    mapit_key = (ynr_election_data['mapit_types'][0],
-                 ynr_election_data['mapit_generation'])
-    mapit_areas_by_name = MAPIT_DATA.areas_by_name[mapit_key]
+    from candidates.cache import get_post_cached
+    from candidates.election_specific import AREA_DATA, AREA_POST_DATA
+    ynr_election_data = Election.objects.get_by_slug(election_id)
+    area_key = (ynr_election_data.area_types.first().name,
+                 ynr_election_data.area_generation)
+    areas_by_name = AREA_DATA.areas_by_name[area_key]
     if province != 'Burkina Faso':
         province = strip_accents(province).upper()
-    mapit_area = mapit_areas_by_name[province]
+    area = areas_by_name[province]
     post_id = AREA_POST_DATA.get_post_id(
-        election_id, mapit_area['type'], mapit_area['id']
+        election_id, area['type'], area['id']
     )
     post_data = get_post_cached(api, post_id)['result']
     return ynr_election_data, post_data
 
 
 def get_existing_popit_person(vi_person_id):
+    from candidates.models import PopItPerson
+    from candidates.popit import get_search_url
     # See if this person already exists by searching for the
     # ID they were imported with:
     query_format = \
@@ -73,6 +68,7 @@ def get_existing_popit_person(vi_person_id):
 
 
 def get_party_data(party_name):
+    from candidates.popit import get_search_url
     # See if this person already exists by searching for the
     # ID they were imported with:
     party_name = party_name.replace('/', '')
@@ -119,6 +115,10 @@ class Command(BaseCommand):
     help = "Import inital candidate data"
 
     def handle(self, username=None, **options):
+        from slumber.exceptions import HttpClientError
+        from candidates.election_specific import PARTY_DATA, shorten_post_label
+        from candidates.models import PopItPerson
+        from candidates.popit import create_popit_api_object
 
         election_data = {
             'prv-2015': 'listedescandidatsauxelectionslegislativeslisteprovincialeanptic.csv',
@@ -223,10 +223,7 @@ class Command(BaseCommand):
 
                     standing_in_election = {
                         'post_id': post_data['id'],
-                        'name': AREA_POST_DATA.shorten_post_label(
-                            election_data['id'],
-                            post_data['label'],
-                        ),
+                        'name': shorten_post_label(post_data['label']),
                         'party_list_position': party_list_order,
                     }
 
@@ -234,7 +231,7 @@ class Command(BaseCommand):
                         standing_in_election['mapit_url'] = post_data['area']['identifier']
 
                     person.standing_in = {
-                        election_data['id']: standing_in_election
+                        election_data.slug: standing_in_election
                     }
 
                     change_metadata = get_change_metadata(
@@ -255,7 +252,7 @@ class Command(BaseCommand):
                         party_id_missing[party_comp] = 1
 
                     person.party_memberships = {
-                        election_data['id']: {
+                        election_data.slug: {
                             'id': party_id,
                             'name': party,
                             'imported_name': party_comp

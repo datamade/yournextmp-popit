@@ -1,26 +1,23 @@
 from collections import defaultdict
 
 from django.core.urlresolvers import reverse
-from django.conf import settings
 from django.http import HttpResponseRedirect
+
+from elections.models import Election
 
 from slugify import slugify
 
-from ..election_specific import AREA_POST_DATA, PARTY_DATA
-from ..models import (
-    PopItPerson, membership_covers_date
-)
+from ..models import MembershipExtra
 
-def get_redirect_to_post(election, post_data):
-    short_post_label = AREA_POST_DATA.shorten_post_label(
-        election, post_data['label']
-    )
+def get_redirect_to_post(election, post):
+    from ..election_specific import shorten_post_label
+    short_post_label = shorten_post_label(post.label)
     return HttpResponseRedirect(
         reverse(
             'constituency',
             kwargs={
                 'election': election,
-                'post_id': post_data['id'],
+                'post_id': post.extra.slug,
                 'ignored_slug': slugify(short_post_label),
             }
         )
@@ -31,49 +28,46 @@ def get_party_people_for_election_from_memberships(
         party_id,
         memberships
 ):
+    election_data = Election.objects.get_by_slug(election)
+    memberships = memberships.select_related('extra', 'person').filter(
+        role=election_data.candidate_membership_role,
+        extra__election=election_data,
+        on_behalf_of_id=party_id
+    ).order_by('extra__party_list_position').all()
+
     people = []
-    election_data = settings.ELECTIONS[election]
-    for membership in memberships:
-        if not membership.get('role') == election_data['candidate_membership_role']:
-            continue
-        person = PopItPerson.create_from_dict(membership['person_id'])
-        if person.party_memberships[election]['id'] != party_id:
-            continue
-        position_in_list = membership.get('party_list_position')
-        if position_in_list:
-            position_in_list = int(position_in_list)
-        else:
-            position_in_list = None
-        people.append((position_in_list, person))
-    people.sort(key=lambda t: (t[0] is None, t[0]))
+    for membership in memberships.all():
+        people.append((
+            membership.extra.party_list_position, membership.person,
+            membership.extra.elected
+        ))
+
     return people
 
-def get_people_from_memberships(election_data, memberships):
-    current_candidates = set()
-    past_candidates = set()
+def split_candidacies(election_data, memberships):
+    # Group the candidates from memberships of a post into current and
+    # past elections. To save queries, memberships should have their
+    # 'extra' objects loaded with prefetch_related, and the 'election'
+    # property of those 'extra' objects should have been loaded with
+    # select_related.
+    current_candidadacies = set()
+    past_candidadacies = set()
     for membership in memberships:
-        if not membership.get('role') == election_data['candidate_membership_role']:
+        try:
+            membership_extra = membership.extra
+        except MembershipExtra.DoesNotExist:
             continue
-        person = PopItPerson.create_from_dict(membership['person_id'])
-        if membership_covers_date(
-                membership,
-                election_data['election_date']
-        ):
-            current_candidates.add(person)
-        else:
-            for other_election, other_election_data in settings.ELECTIONS_BY_DATE:
-                if not other_election_data.get('use_for_candidate_suggestions'):
-                    continue
-                if membership_covers_date(
-                        membership,
-                        other_election_data['election_date'],
-                ):
-                    past_candidates.add(person)
+        if membership_extra.election == election_data:
+            if not membership.role == election_data.candidate_membership_role:
+                continue
+            current_candidadacies.add(membership)
+        elif membership_extra.election:
+            past_candidadacies.add(membership)
 
-    return current_candidates, past_candidates
+    return current_candidadacies, past_candidadacies
 
-def group_people_by_party(election, people, party_list=True, max_people=None):
-    """Take a list of candidates and return them grouped by party
+def group_candidates_by_party(election_data, candidacies, party_list=True, max_people=None):
+    """Take a list of candidacies and return the people grouped by party
 
     This returns a tuple of the party_list boolean and a list of
     parties-and-people.
@@ -91,27 +85,18 @@ def group_people_by_party(election, people, party_list=True, max_people=None):
     will be ordered by the last name of the first candidate for each
     party."""
 
-    # We need to build up this dictionary based on the embedded
-    # memberships because PARTY_DATA.party_id_to_name doesn't include
-    # now-dissolved parties...
     party_id_to_name = {}
     party_id_to_people = defaultdict(list)
     party_truncated = dict()
-    election_data = settings.ELECTIONS[election]
-    for person in people:
-        if election in person.party_memberships:
-            party_data = person.party_memberships[election]
-        else:
-            party_data = person.last_party
-        position = None
-        standing_in_election = person.standing_in.get(election)
-        if standing_in_election and election_data['party_lists_in_use']:
-            position = standing_in_election.get('party_list_position')
-        party_id = party_data['id']
-        party_id_to_name[party_id] = party_data['name']
-        party_id_to_people[party_id].append((position, person))
+    for candidacy in candidacies:
+        party = candidacy.on_behalf_of
+        party_id_to_name[party.extra.slug] = party.name
+        position = candidacy.extra.party_list_position
+        party_id_to_people[party.extra.slug].append(
+            (position, candidacy.person, candidacy.extra.elected)
+        )
     for party_id, people_list in party_id_to_people.items():
-        if election_data['party_lists_in_use']:
+        if election_data.party_lists_in_use:
             # sort by party list position
             people_list.sort(key=lambda p: ( p[0] is None, p[0] ))
             # only return the configured maximum number of people
@@ -120,7 +105,7 @@ def group_people_by_party(election, people, party_list=True, max_people=None):
                 party_truncated[party_id] = len(people_list)
                 del people_list[max_people:]
         else:
-            people_list.sort(key=lambda p: p[1].last_name)
+            people_list.sort(key=lambda p: p[1].family_name)
     try:
         result = [
             (
@@ -132,7 +117,7 @@ def group_people_by_party(election, people, party_list=True, max_people=None):
                 },
                 # throw away the party list position data we
                 # were only using for sorting
-                [p[1] for p in v]
+                [(p[1], p[2]) for p in v]
             )
             for k, v in party_id_to_people.items()
         ]
@@ -141,7 +126,7 @@ def group_people_by_party(election, people, party_list=True, max_people=None):
     if party_list:
         result.sort(key=lambda t: t[0]['name'])
     else:
-        result.sort(key=lambda t: t[1][0].last_name)
+        result.sort(key=lambda t: t[1][0][0].family_name)
     return {
         'party_lists_in_use': party_list,
         'parties_and_people': result

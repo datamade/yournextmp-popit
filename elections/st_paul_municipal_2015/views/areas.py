@@ -2,29 +2,23 @@
 
 import re
 
-from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.core.cache import cache
-from django.http import Http404, HttpResponseBadRequest, HttpResponseRedirect
+from django.db.models import Prefetch
+from django.http import Http404, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 from django.utils.text import slugify
-from django.utils.http import urlquote
 from django.utils.translation import ugettext as _
 
-from candidates.cache import get_post_cached, UnknownPostException
+from candidates.models import AreaExtra, MembershipExtra
 from candidates.models.auth import get_edits_allowed
-from candidates.popit import PopItApiMixin
 from candidates.forms import NewPersonForm
-from candidates.views import ConstituencyDetailView
-from candidates.views.helpers import get_people_from_memberships, group_people_by_party
+from candidates.views.helpers import split_candidacies, group_candidates_by_party
 
-from elections.mixins import ElectionMixin
+from elections.models import AreaType, Election
 
-from official_documents.models import OfficialDocument
 
-from .frontpage import get_cached_boundary
-
-class StPaulAreasView(PopItApiMixin, TemplateView):
+class StPaulAreasView(TemplateView):
     template_name = 'candidates/areas.html'
 
     def get(self, request, *args, **kwargs):
@@ -40,11 +34,11 @@ class StPaulAreasView(PopItApiMixin, TemplateView):
         context = super(StPaulAreasView, self).get_context_data(**kwargs)
 
         all_area_names = set()
-        area_dict = {}
         context['posts'] = []
 
         for area_id in self.area_ids:
             ocd_division = area_id.replace(',', '/')
+<<<<<<< HEAD
             # Show candidates from the current elections:
             for election, election_data in settings.ELECTIONS_CURRENT:
 
@@ -88,50 +82,94 @@ class StPaulAreasView(PopItApiMixin, TemplateView):
                                 hidden_post_widget=True,
                             ),
                         })
+=======
+            # FIXME: there's quite a bit of repetition from
+            # candidates/views/areas.py; do some DRY refactoring:
+            area_extra = get_object_or_404(
+                AreaExtra.objects \
+                    .select_related('base', 'type') \
+                    .prefetch_related('base__posts'),
+                base__identifier=ocd_division,
+                base__posts__extra__elections__current=True
+            )
+            area = area_extra.base
+            all_area_names.add(area.name)
+            for post in area.posts.all():
+                post_extra = post.extra
+                election = post_extra.elections.get(current=True)
+                locked = post_extra.candidates_locked
+                extra_qs = MembershipExtra.objects.select_related('election')
+                current_candidacies, created = split_candidacies(
+                    election,
+                    post.memberships.prefetch_related(
+                        Prefetch('extra', queryset=extra_qs)
+                    ).select_related(
+                        'person', 'person__extra', 'on_behalf_of',
+                        'on_behalf_of__extra', 'organization'
+                    ).all()
+                )
+                current_candidacies = group_candidates_by_party(
+                    election,
+                    current_candidacies,
+                    party_list=election.party_lists_in_use,
+                    max_people=election.default_party_list_members_to_show
+                )
+                context['posts'].append({
+                    'election': election.slug,
+                    'election_data': election,
+                    'post_data': {
+                        'id': post.extra.slug,
+                        'label': post.label,
+                    },
+                    'candidates_locked': locked,
+                    'candidate_list_edits_allowed':
+                    get_edits_allowed(self.request.user, locked),
+                    'candidacies': current_candidacies,
+                    'add_candidate_form': NewPersonForm(
+                        election=election.slug,
+                        initial={
+                            ('constituency_' + election.slug): post_extra.slug,
+                            ('standing_' + election.slug): 'standing',
+                        },
+                        hidden_post_widget=True,
+                    ),
+                })
+>>>>>>> 7a6addb8e6d01ca16b0dd3840bbc4c2d74564691
 
         context['all_area_names'] = u' — '.join(all_area_names)
         context['suppress_official_documents'] = True
 
         return context
 
-class StPaulAreasOfTypeView(PopItApiMixin, TemplateView):
+
+class StPaulAreasOfTypeView(TemplateView):
     template_name = 'candidates/areas-of-type.html'
 
     def get_context_data(self, **kwargs):
-        context = super(AreasOfTypeView, self).get_context_data(**kwargs)
-        requested_mapit_type = kwargs['mapit_type']
-        all_mapit_tuples = set(
-            (mapit_type, election_data['mapit_generation'])
-            for election, election_data in settings.ELECTIONS_CURRENT
-            for mapit_type in election_data['mapit_types']
-            if mapit_type == requested_mapit_type
+        context = super(StPaulAreasOfTypeView, self).get_context_data(**kwargs)
+
+        requested_area_type = kwargs['area_type']
+        prefetch_qs = AreaExtra.objects.select_related('base').order_by('base__name')
+        area_type = get_object_or_404(
+            AreaType.objects \
+                .prefetch_related(Prefetch('areas', queryset=prefetch_qs)),
+            name=requested_area_type
         )
-        if not all_mapit_tuples:
-            raise Http404(_("Area '{0}' not found").format(requested_mapit_type))
-        if len(all_mapit_tuples) > 1:
-            message = _("Multiple MapIt generations for type {mapit_type} found")
-            raise Exception(message.format(mapit_type=requested_mapit_type))
-        mapit_tuple = list(all_mapit_tuples)[0]
         areas = [
             (
                 reverse(
                     'areas-view',
                     kwargs={
-                        'type_and_area_ids': '{type}-{area_id}'.format(
-                            type=requested_mapit_type,
-                            area_id=area['id']
-                        ),
-                        'ignored_slug': slugify(area['name'])
+                        'type_and_area_ids': '{area_id}'.format(
+                            area_id=re.sub(r'/', ',', area.base.identifier)
+                        )
                     }
                 ),
-                area['name'],
-                area['type_name'],
+                area.base.name,
+                requested_area_type,
             )
-            for area in MAPIT_DATA.areas_by_id[mapit_tuple].values()
+            for area in area_type.areas.all()
         ]
-        areas.sort(key=lambda a: a[1])
         context['areas'] = areas
-        context['area_type_name'] = _('[No areas found]')
-        if areas:
-            context['area_type_name'] = areas[0][2]
+        context['area_type'] = area_type
         return context
