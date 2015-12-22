@@ -33,7 +33,7 @@ class Command(BaseCommand):
                 'area_generation': 22,
                 'election_date': date(2016, 5, 5),
                 'party_lists_in_use': True,
-                'mapit_code': 'SPC',
+               'mapit_code': 'SPC',
                 'area_type_description': 'Scottish Parliament constituency',
                 'organization_slug': 'scottish-parliament',
                 'organization_name': 'Scottish Parliament',

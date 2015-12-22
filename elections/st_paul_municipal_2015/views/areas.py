@@ -38,51 +38,7 @@ class StPaulAreasView(TemplateView):
 
         for area_id in self.area_ids:
             ocd_division = area_id.replace(',', '/')
-<<<<<<< HEAD
-            # Show candidates from the current elections:
-            for election, election_data in settings.ELECTIONS_CURRENT:
 
-                if election_data['ocd_division'] in ocd_division:
-
-                    post_data = get_post_cached(self.api, area_id)['result']
-                    boundary_data = get_cached_boundary(ocd_division)
-
-                    all_area_names.add(boundary_data['name'])
-
-                    locked = post_data.get('candidates_locked', False)
-
-                    current_candidates, _ = get_people_from_memberships(
-                        election_data,
-                        post_data['memberships']
-                    )
-
-                    current_candidates = group_people_by_party(
-                        election,
-                        current_candidates,
-                        party_list=election_data.get('party_lists_in_use')
-                    )
-
-                    if not area_dict.get(ocd_division):
-                        area_dict[ocd_division] = 'done'
-
-                        context['posts'].append({
-                            'election': election,
-                            'election_data': election_data,
-                            'post_data': post_data,
-                            'candidates_locked': locked,
-                            'candidate_list_edits_allowed':
-                            get_edits_allowed(self.request.user, locked),
-                            'candidates': current_candidates,
-                            'add_candidate_form': NewPersonForm(
-                                election=election,
-                                initial={
-                                    ('constituency_' + election): area_id,
-                                    ('standing_' + election): 'standing',
-                                },
-                                hidden_post_widget=True,
-                            ),
-                        })
-=======
             # FIXME: there's quite a bit of repetition from
             # candidates/views/areas.py; do some DRY refactoring:
             area_extra = get_object_or_404(
@@ -134,7 +90,6 @@ class StPaulAreasView(TemplateView):
                         hidden_post_widget=True,
                     ),
                 })
->>>>>>> 7a6addb8e6d01ca16b0dd3840bbc4c2d74564691
 
         context['all_area_names'] = u' — '.join(all_area_names)
         context['suppress_official_documents'] = True
