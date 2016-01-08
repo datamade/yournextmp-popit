@@ -18,7 +18,7 @@ class Command(BaseCommand):
     def handle(self, **options):
         
         #ocd_url = settings.OCD_BASE_URL
-        ocd_url = 'http://127.0.0.1:8002'
+        ocd_url = 'http://ocd.datamade.us'
 
 
         il_parties, _ = PartySet.objects.get_or_create(
