@@ -3,6 +3,14 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    # Add URL configuration here if you want to replace any of the
-    # default views from the candidates application.
+    url(
+        r'^$',
+        views.IllinoisAddressFinder.as_view(),
+        name='lookup-name'
+    ),
+    url(
+        r'^areas/(?P<area_ids>.*?)$',
+        views.StPaulAreasView.as_view(),
+        name='st-paul-areas-view'
+    ),
 ]
