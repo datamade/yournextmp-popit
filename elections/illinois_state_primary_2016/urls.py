@@ -10,7 +10,7 @@ urlpatterns = [
     ),
     url(
         r'^areas/(?P<area_ids>.*?)$',
-        views.StPaulAreasView.as_view(),
-        name='st-paul-areas-view'
+        views.IllinoisAreasView.as_view(),
+        name='illinois-areas-view'
     ),
 ]

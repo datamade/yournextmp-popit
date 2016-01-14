@@ -1,5 +1,10 @@
 import re
 
+from django.core.cache import cache
+from django.conf import settings
+from django.utils.translation import ugettext as _
+from django.core.exceptions import ValidationError
+
 from pygeocoder import Geocoder, GeocoderError
 import requests
 
@@ -10,7 +15,7 @@ def get_cached_boundary(division_id):
     if cache.get(division_id):
         return cache.get(division_id)
 
-    boundary = requests.get('{0}/boundaries/'.format(OCD_BOUNDARIES_URL),
+    boundary = requests.get('{0}/boundaries/'.format(OCD_BASE_URL),
                             params={'external_id': division_id})
     
     area_blob = boundary.json()['objects'][0]
@@ -32,10 +37,7 @@ def check_address(address_string, country=None):
 
     coords = ','.join([str(p) for p in location_results[0].coordinates])
 
-    if cache.get(coords):
-        return {'coords': coords}
-
-    boundaries = requests.get('{0}/boundaries'.format(OCD_BOUNDARIES_URL),
+    boundaries = requests.get('{0}/boundaries'.format(OCD_BASE_URL),
                               params={'contains': coords})
 
     if boundaries.json()['meta']['total_count'] > 0:
@@ -43,12 +45,18 @@ def check_address(address_string, country=None):
         areas = set()
 
         for area in boundaries.json()['objects']:
-            division_slug = area['external_id'].replace('/', ',')
-            if cache.get(area['external_id']):
-                areas.add(division_slug)
-            elif not 'precinct' in division_slug:
-                cache.set(area['external_id'], area, None)
-                areas.add(division_slug)
+
+            division_id = area['external_id']
+
+            if 'sldl' in division_id or 'sldu' in division_id:
+                division_slug = area['external_id'].replace('/', ',')
+
+                if cache.get(division_id):
+                    areas.add(division_slug)
+                else:
+                    cache.set(division_id, area, None)
+                    areas.add(division_slug)
+
 
         return {
             'area_ids': ';'.join(areas),

@@ -1,14 +1,21 @@
+# -*- coding: utf-8 -*-
+
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
+from django.db.models import Prefetch
+from django.utils.translation import ugettext as _
 
 from candidates.views import AddressFinderView
-from candidates.forms import AddressForm
+from candidates.forms import AddressForm, NewPersonForm
+from candidates.models.popolo_extra import AreaExtra, MembershipExtra
+from candidates.models.auth import get_edits_allowed
+from candidates.views.helpers import split_candidacies, group_candidates_by_party
 
 from .lib import check_address
 
-class IllinosAddressForm(AddressForm):
+class IllinoisAddressForm(AddressForm):
 
     def clean_address(self):
         address = self.cleaned_data['address']
@@ -26,14 +33,16 @@ class IllinoisAddressFinder(AddressFinderView):
             form.cleaned_data['address'],
             country=self.country,
         )
+        print('resolved_address', resolved_address)
         return HttpResponseRedirect(
-            reverse('st-paul-areas-view', kwargs=resolved_address)
+            reverse('illinois-areas-view', kwargs=resolved_address)
         )
 
 class IllinoisAreasView(TemplateView):
     template_name = 'candidates/areas.html'
 
     def get(self, request, *args, **kwargs):
+        print('get kwargs', kwargs)
         try:
             area_ids = kwargs['area_ids']
         except KeyError:
