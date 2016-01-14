@@ -5,6 +5,8 @@ from candidates.views.constituencies import ConstituencyDetailView, \
 
 from elections import views
 
+from . import views as illinois_views
+
 post_ignored_slug_re = r'(?!record-winner$|retract-winner$|.*\.csv$).*'
 
 urlpatterns = [
@@ -14,8 +16,13 @@ urlpatterns = [
         name='lookup-name'
     ),
     url(
+        r'^posts$',
+        illinois_views.IllinoisPostListView.as_view(),
+        name='posts'
+    ),
+    url(
         r'^areas/(?P<area_ids>.*?)$',
-        views.OCDAreasView.as_view(),
+        illinois_views.IllinoisAreasView.as_view(),
         name='areas-view'
     ),
     url(

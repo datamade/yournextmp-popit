@@ -110,7 +110,7 @@ class Command(BaseCommand):
                     area=area,
                     role=election_defaults['for_post_role'],
                     defaults={'label': data['label_format'].format(
-                                     area_name=ocd_area['name'].rsplit('-', 1)[1])}
+                                     area_name=int(ocd_area['name'].rsplit('-', 1)[1]))}
                 )
                 post_extra, _ = PostExtra.objects.update_or_create(
                     base=post,

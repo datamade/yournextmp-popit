@@ -1,0 +1,38 @@
+
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block body_class %}posts{% endblock %}
+
+{% block title %}{% trans "Candidates for all posts in current elections" %}{% endblock %}
+
+{% block hero %}
+  <h1>{% trans "All Posts in Current Elections" %}</h1>
+{% endblock %}
+
+{% block content %}
+
+    <p>{% trans "Follow one of the links below to see the known candidates for that post:" %}</p>
+
+    {% for election, person_posts in all_posts %}
+        <h2>{{ election.name }}</h2>
+
+            {% for post, people in person_posts.items %}
+                <h3>
+                   <a href="{% url 'constituency' election=election.slug post_id=post.extra.slug ignored_slug=post.extra.short_label|slugify %}">
+                       {{ post.label }}
+                   </a>
+                </h3>
+                <ul>
+                {% for person, party in people %}
+                    <li>
+                        <a href="{% url 'person-view' person_id=person.id ignored_slug=person.name|slugify %}">
+                            {{ person.name }} - {{ party.name|cut:"Party" }}
+                        </a>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endfor %}
+    {% endfor %}
+
+{% endblock %}

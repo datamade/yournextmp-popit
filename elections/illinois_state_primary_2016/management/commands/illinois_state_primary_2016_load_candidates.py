@@ -85,7 +85,7 @@ class Command(BaseCommand):
                 if created:
                     person_extra = PersonExtra.objects.create(base=person)
                     person_extra.record_version({
-                        'information_source': 'New candidate from CSV',
+                        'information_source': 'New candidate from Illinois Sunshine',
                         'version_id': '{0:016x}'.format(randint(0, sys.maxint)),
                         'timestamp': datetime.utcnow().isoformat()
                     })

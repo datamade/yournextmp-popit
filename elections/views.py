@@ -114,14 +114,14 @@ class OCDAreasView(TemplateView):
             )
 
             area = area_extra.base
-            all_area_names.append(area.name)
 
             for post in area.posts.all():
+                all_area_names.append(post.label)
                 post_extra = post.extra
                 election = post_extra.elections.get(current=True)
                 locked = post_extra.candidates_locked
                 extra_qs = MembershipExtra.objects.select_related('election')
-                current_candidacies, created = split_candidacies(
+                current_candidacies, _ = split_candidacies(
                     election,
                     post.memberships.prefetch_related(
                         Prefetch('extra', queryset=extra_qs)

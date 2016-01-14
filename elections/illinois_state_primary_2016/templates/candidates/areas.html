@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% load metadescription %}
+{% load standing %}
+{% load exists %}
+
+{% block body_class %}areas{% endblock %}
+
+{% block title %}{% blocktrans %}Areas: {{ all_area_names }}{% endblocktrans %}{% endblock %}
+
+{% if render_map %}
+    {% block extra_css %}
+        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+        <style>
+            .area-map {
+                height: 180px;
+            }
+        </style>
+    {% endblock %}
+    {% block extra_js %}
+         <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+         <script type="text/javascript" src="http://maps.stamen.com/js/tile.stamen.js?v1.3.0"></script>
+    {% endblock %}
+{% endif %}
+
+{% block hero %}
+  <h1>{% blocktrans %}Areas: {{ all_area_names }}{% endblocktrans %}</h1>
+{% endblock %}
+
+{% block content %}
+
+  {% for post in posts %}
+
+    {% with election=post.election election_data=post.election_data candidate_list_edits_allowed=post.candidate_list_edits_allowed candidates_locked=post.candidates_locked post_data=post.post_data add_candidate_form=post.add_candidate_form candidacies=post.candidacies %}
+
+      <h2>{{ election_data.name }}</h2>
+
+      {% include 'candidates/_candidates_for_post.html' %}
+
+    {% endwith %}
+  {% endfor %}
+
+{% endblock %}
