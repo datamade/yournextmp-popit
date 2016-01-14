@@ -1,4 +1,4 @@
-OCD_BASE_URL = 'http://127.0.0.1:8002'
+OCD_BASE_URL = 'http://ocd.datamade.us'
 MAPIT_BASE_URL = ''
 
 SITE_OWNER = 'DataMade'
