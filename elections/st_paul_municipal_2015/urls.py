@@ -1,31 +1,31 @@
-from django.conf import settings
 from django.conf.urls import url
+
 from candidates.views.constituencies import ConstituencyDetailView, \
     ConstituencyRecordWinnerView, ConstituencyRetractWinnerView
 
-from . import views
+from elections import views
 
 post_ignored_slug_re = r'(?!record-winner$|retract-winner$|.*\.csv$).*'
 
 urlpatterns = [
     url(
         r'^$',
-        views.StPaulAddressFinder.as_view(),
+        views.OCDAddressFinder.as_view(),
         name='lookup-name'
     ),
     url(
         r'^areas/(?P<area_ids>.*?)$',
-        views.StPaulAreasView.as_view(),
-        name='st-paul-areas-view'
+        views.OCDAreasView.as_view(),
+        name='areas-view'
     ),
     url(
         r'^areas-of-type/(?P<area_type>.*?)(?:/(?P<ignored_slug>.*))?$',
-        views.StPaulAreasOfTypeView.as_view(),
+        views.OCDAreasOfTypeView.as_view(),
         name='areas-of-type-view'
     ),
     url(
         r'^election/{election}/post/{post}/record-winner$'.format(
-            election=settings.ELECTION_RE,
+            election=r'(?P<election>[^/]+)',
             post=r'(?P<post_id>.*)',
         ),
         ConstituencyRecordWinnerView.as_view(),
@@ -33,7 +33,7 @@ urlpatterns = [
     ),
     url(
         r'^election/{election}/post/{post}/retract-winner$'.format(
-            election=settings.ELECTION_RE,
+            election=r'(?P<election>[^/]+)',
             post=r'(?P<post_id>.*)',
         ),
         ConstituencyRetractWinnerView.as_view(),
