@@ -10,27 +10,51 @@
   <h1>{% trans "All Posts in Current Elections" %}</h1>
 {% endblock %}
 
+{% block extra_js %}
+
+{% endblock %}
+
 {% block content %}
 
     {% for election, person_posts in all_posts %}
         <h2>{{ election.name }}</h2>
-
-            {% for post, people in person_posts.items %}
-                <h3>
-                   <a href="{% url 'constituency' election=election.slug post_id=post.extra.slug ignored_slug=post.extra.short_label|slugify %}">
-                       {{ post.label }}
-                   </a>
-                </h3>
-                <ul>
-                {% for person, party in people %}
-                    <li>
-                        <a href="{% url 'person-view' person_id=person.id ignored_slug=person.name|slugify %}">
-                            {{ person.name }} - {{ party.name|cut:"Party" }}
-                        </a>
-                    </li>
-                {% endfor %}
-                </ul>
-            {% endfor %}
+        <div class="row">
+            <div class="small-6 columns">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Office</th>
+                            <th>Candidate</th>
+                            <th>Party</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for post, people in person_posts.items %}
+                        {% for person, party in people %}
+                        <tr>
+                            <td>
+                               <a href="{% url 'constituency' election=election.slug post_id=post.extra.slug ignored_slug=post.extra.short_label|slugify %}">
+                                   {{ post.label }}
+                               </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'person-view' person_id=person.id ignored_slug=person.name|slugify %}">
+                                    {{ person.name }}
+                                </a>
+                            </td>
+                            <td>
+                                {{ party.name|cut:"Party" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    <tbody>
+                </table>
+            </div>
+            <div class="small-6 columns">
+                <div id="{{ election.slug }}-map"></div>
+            </div>
+        </div>
     {% endfor %}
 
 {% endblock %}
