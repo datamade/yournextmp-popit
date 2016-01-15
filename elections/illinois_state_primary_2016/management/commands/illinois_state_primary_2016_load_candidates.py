@@ -23,13 +23,23 @@ class Command(BaseCommand):
         parser.add_argument('recreate-people')
     
     def get_party(self, party_name):
+        
+        il_parties, _ = PartySet.objects.get_or_create(
+            slug='us-il', defaults={'name': 'Illnois'}
+        )
+        
         org = Organization.objects.get(name__icontains=party_name)
         
         try:
             org_extra = OrganizationExtra.objects.get(base=org)
         except OrganizationExtra.DoesNotExist:
+            org.classification = 'Party'
+            org.party_sets.add(il_parties)
+            org.save()
+
             org_extra = OrganizationExtra.objects.create(base=org,
                                                          slug=slugify(party_name))
+        
 
         return org
 
