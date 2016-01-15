@@ -21,7 +21,7 @@ urlpatterns = [
         name='posts'
     ),
     url(
-        r'^areas/(?P<area_ids>.*?)$',
+        r'^areas/$',
         illinois_views.IllinoisAreasView.as_view(),
         name='areas-view'
     ),

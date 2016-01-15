@@ -1,7 +1,11 @@
 import itertools
 from collections import OrderedDict
+import json
+
+import requests
 
 from django.views.generic import TemplateView
+from django.core.cache import cache
 
 from candidates.models.popolo_extra import MembershipExtra
 from candidates.views.helpers import group_candidates_by_party
@@ -9,27 +13,36 @@ from candidates.views.helpers import group_candidates_by_party
 from elections.views import OCDAreasView
 from elections.illinois_state_primary_2016.settings import OCD_BASE_URL
 
-import requests
 
 class IllinoisAreasView(OCDAreasView):
     
     def get_context_data(self, **kwargs):
         context = super(IllinoisAreasView, self).get_context_data(**kwargs)
         context['render_map'] = True
+        context['area_geojson'] = {}
 
         for idx, area in enumerate(context['posts']):
             post_id = area['post_data']['id']
             chamber_slug = 'illinois-upper-2011'
-            
+
             if 'house' in post_id:
                 chamber_slug = 'illinois-lower-2011'
-            
-            fetch_url = '{0}/boundaries/{1}/{2}/shape'.format(OCD_BASE_URL, 
-                                                              chamber_slug, 
-                                                              post_id)
-            
-            area_geojson = requests.get(fetch_url).content
-            context['posts'][idx]['post_data']['area_geojson'] = area_geojson
+
+            if cache.get('{}-geojson'.format(post_id)):
+                area_geojson = cache.get('{}-geojson'.format(post_id))
+
+            else:
+                fetch_url = '{0}/boundaries/{1}/{2}/shape'.format(OCD_BASE_URL, 
+                                                                  chamber_slug, 
+                                                                  post_id)
+
+                area_geojson = requests.get(fetch_url).content
+                cache.set('{}-geojson'.format(post_id), area_geojson)
+
+            context['area_geojson'][post_id] = json.loads(area_geojson)
+
+        context['area_geojson'] = json.dumps(context['area_geojson'])
+        context['searched_coords'] = json.dumps(self.searched_coords)
 
         return context
 

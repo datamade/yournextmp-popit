@@ -21,6 +21,10 @@
     {% block extra_js %}
          <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
          <script type="text/javascript" src="http://maps.stamen.com/js/tile.stamen.js?v1.3.0"></script>
+         <script type="text/javascript">
+            var area_geojson = {{ area_geojson|safe }}
+            var searched_coords = {{ searched_coords|safe }}
+         </script>
     {% endblock %}
 {% endif %}
 

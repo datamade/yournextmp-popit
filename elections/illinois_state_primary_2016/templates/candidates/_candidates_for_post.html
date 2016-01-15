@@ -293,8 +293,8 @@
             <div id="{{ post_data.id }}-map" class="area-map"></div>
         </div>
         <script type="text/javascript">
-            var boundary_geojson = {{ post_data.area_geojson|safe }};
             $(document).ready(function(){
+                var post_id = "{{ post_data.id }}";
                 var map = L.map('{{ post_data.id }}-map', {
                     'scrollWheelZoom': false,
                     'zoom': 6,
@@ -302,9 +302,17 @@
                     'attributionControl': false
                 }).fitBounds([[36.970298, -87.495199],[42.5083380000001,-91.5130789999999]]);
                 var tiles = new L.StamenTileLayer('toner-lite').addTo(map);
-                var geojson = L.geoJson(boundary_geojson).addTo(map);
+                var geojson = L.geoJson(area_geojson[post_id], {
+                    'style': {
+                        'weight': 1,
+                        'opacity': 1,
+                        'fillOpacity': 0.2,
+                        'color': '#fbab18'
+                    }
+                }).addTo(map);
+                var address_point = L.marker(searched_coords).addTo(map);
                 map.fitBounds(geojson.getBounds());
-            })
+            });
         </script>
     {% endif %}
 </div>

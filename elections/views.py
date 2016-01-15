@@ -29,14 +29,17 @@ class OCDAddressFinder(AddressFinderView):
 
     def form_valid(self, form):
         form.cleaned_data['address']
-        resolved_address = check_address(
+        area_ids, coords = check_address(
             form.cleaned_data['address'],
             country=self.country,
         )
+        
+        areas_url = '{0}?coords={1}'.format(reverse('areas-view'), coords)
+        
+        for area in area_ids:
+            areas_url = '{0}&area_id={1}'.format(areas_url, area)
 
-        return HttpResponseRedirect(
-            reverse('areas-view', kwargs=resolved_address)
-        )
+        return HttpResponseRedirect(areas_url)
 
 class OCDAreasOfTypeView(TemplateView):
     template_name = 'candidates/areas-of-type.html'
@@ -75,10 +78,10 @@ class OCDAreasView(TemplateView):
     
     def get(self, request, *args, **kwargs):
         try:
-            area_ids = kwargs['area_ids']
+            self.area_ids = request.GET.getlist('area_id')
         except KeyError:
             return HttpResponseRedirect('/')
-        self.area_ids = [o for o in area_ids.split(';')]
+        self.searched_coords = request.GET['coords'].split(',')
         view = super(OCDAreasView, self).get(request, *args, **kwargs)
         return view
 

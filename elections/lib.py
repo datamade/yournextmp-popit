@@ -57,11 +57,8 @@ def check_address(address_string, country=None):
                 else:
                     cache.set(division_id, area, None)
                     areas.add(division_slug)
-
-
-        return {
-            'area_ids': ';'.join(areas),
-        }
+        
+        return areas, coords
 
     error = _(u"Unable to find constituency for '{0}'")
     raise ValidationError(error.format(tidied_address))
