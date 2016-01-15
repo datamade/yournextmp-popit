@@ -99,9 +99,15 @@ class Command(BaseCommand):
 
             for ocd_area in r.json()['objects']:
 
+                shape_url = '{0}/boundaries/{1}/{2}/simple_shape'.format(ocd_url, 
+                                                                         data['area_type_name'], 
+                                                                         ocd_area['name'])
+                
+                shape = requests.get(shape_url)
+
                 area, _ = Area.objects.update_or_create(
                     identifier=ocd_area['external_id'],
-                    defaults={'name': ocd_area['name']}
+                    defaults={'name': ocd_area['name'], 'geom': shape.content}
                 )
 
                 AreaExtra.objects.get_or_create(base=area, type=area_type)
